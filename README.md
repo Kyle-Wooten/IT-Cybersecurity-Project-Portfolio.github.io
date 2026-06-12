@@ -236,8 +236,3 @@ This project portfolio demonstrates practical, hands-on experience across IT inf
 
 The projects emphasize not only technical configuration, but also troubleshooting, reporting, security interpretation, and professional documentation suitable for real-world IT and cybersecurity environments.
 
----
-
-## Contact
-
-This portfolio is intended for professional development, resume support, and LinkedIn project showcasing.
