@@ -54,7 +54,7 @@ This project showcases the ability to troubleshoot real-world network problems u
 
 ## Project Scenario
 
-Throughout the Kyle School labs, multiple network connectivity issues were encountered and resolved. These issues included loss of access to Proxmox, inability to reach a web interface, destination host unreachable messages, DNS failures, incorrect static IP configuration, routing issues, SSH connectivity problems, Packet Tracer VLAN and subinterface errors, firewall rule conflicts, and service availability problems.
+Throughout the labs, multiple network connectivity issues were encountered and resolved. These issues included loss of access to Proxmox, inability to reach a web interface, destination host unreachable messages, DNS failures, incorrect static IP configuration, routing issues, SSH connectivity problems, Packet Tracer VLAN and subinterface errors, firewall rule conflicts, and service availability problems.
 
 This project documents those troubleshooting methods as a repeatable workflow that can be used in future IT support, network administration, cybersecurity lab, and SOC environments.
 
@@ -340,48 +340,6 @@ The project successfully demonstrates the ability to:
 - Troubleshoot Cisco VLAN and routing issues
 - Use packet capture for validation
 - Document problems and resolutions professionally
-
----
-
-## Screenshots
-
-Screenshots should be added to a `screenshots/` folder in this project directory.
-
-Recommended screenshots include:
-
-```markdown
-![IP Configuration](screenshots/ip-configuration.png)
-![Ping Test](screenshots/ping-test.png)
-![Routing Table](screenshots/routing-table.png)
-![Proxmox GUI Access](screenshots/proxmox-gui-access.png)
-![Packet Tracer VLAN Verification](screenshots/packet-tracer-vlan-verification.png)
-![Wireshark Capture](screenshots/wireshark-capture.png)
-```
-
----
-
-## Recommended Repository Structure
-
-```text
-Networking/
-└── Network-Troubleshooting/
-    ├── README.md
-    ├── final-lab-report.pdf
-    ├── commands.txt
-    ├── notes.md
-    ├── evidence/
-    │   ├── ip-configuration.txt
-    │   ├── routing-table.txt
-    │   ├── ping-results.txt
-    │   ├── dns-results.txt
-    │   └── service-status.txt
-    └── screenshots/
-        ├── ip-configuration.png
-        ├── ping-test.png
-        ├── routing-table.png
-        ├── proxmox-gui-access.png
-        └── packet-tracer-verification.png
-```
 
 ---
 
