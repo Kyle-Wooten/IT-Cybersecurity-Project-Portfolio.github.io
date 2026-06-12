@@ -1,1 +1,375 @@
+# DVWA Ubuntu Server Hardening - commands.txt
+# Project: DVWA-Ubuntu-Server-Hardening
+# Server: UbunServDVWA-TeamA
+# IP Address: 10.10.10.223/16
+# Purpose: Commands used to baseline, harden, monitor, and document the DVWA Ubuntu server.
+# Note: Commands should be run in an authorized lab environment only.
+
+################################################################################
+# 1. SYSTEM IDENTIFICATION AND BASELINE CHECKS
+################################################################################
+
+whoami
+hostname
+hostnamectl
+cat /etc/os-release
+uname -a
+date
+uptime
+who
+last
+ip a
+ip route
+resolvectl status
+sudo ss -tulnp
+sudo lsof -i
+systemctl --type=service --state=running
+systemctl --failed
+
+
+################################################################################
+# 2. PACKAGE UPDATES AND BASIC MAINTENANCE
+################################################################################
+
+sudo apt update
+sudo apt upgrade -y
+sudo apt autoremove -y
+sudo apt autoclean
+apt list --upgradable
+
+
+################################################################################
+# 3. USER AND ACCOUNT REVIEW
+################################################################################
+
+cat /etc/passwd
+awk -F: '$7 ~ /(bash|sh)$/ {print $1 " " $7}' /etc/passwd
+cat /etc/group
+getent group sudo
+chage -l $USER
+sudo passwd -S root
+sudo passwd -l root
+sudo passwd -S root
+
+
+################################################################################
+# 4. SSH HARDENING
+################################################################################
+
+sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+sudo nano /etc/ssh/sshd_config
+
+# Recommended SSH settings to verify or add inside /etc/ssh/sshd_config:
+# PermitRootLogin no
+# PasswordAuthentication no
+# PubkeyAuthentication yes
+# MaxAuthTries 3
+# ClientAliveInterval 300
+# ClientAliveCountMax 2
+# LoginGraceTime 60
+# X11Forwarding no
+# AllowTcpForwarding no
+# Banner /etc/issue.net
+
+sudo nano /etc/issue.net
+
+# Example banner text:
+# Authorized access only. Activity may be monitored and logged.
+
+sudo sshd -t
+sudo systemctl restart ssh
+sudo systemctl status ssh
+sudo journalctl -u ssh
+sudo tail -n 100 /var/log/auth.log
+
+
+################################################################################
+# 5. FIREWALL CONFIGURATION WITH UFW
+################################################################################
+
+sudo apt install ufw -y
+sudo ufw status verbose
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp
+
+# Allow HTTP only if DVWA needs to be reachable for authorized lab testing.
+sudo ufw allow 80/tcp
+
+# Deny HTTP if the hardening objective requires blocking web access.
+sudo ufw deny 80/tcp
+
+sudo ufw enable
+sudo ufw reload
+sudo ufw status numbered
+
+# Delete a numbered UFW rule.
+sudo ufw delete <RULE_NUMBER>
+
+sudo ufw status verbose
+
+
+################################################################################
+# 6. IPTABLES REVIEW AND TEMPORARY RULES
+################################################################################
+
+sudo iptables -L -n -v
+sudo iptables -L INPUT -n --line-numbers
+
+# Drop traffic from a specific IP address.
+sudo iptables -A INPUT -s <IP_ADDRESS> -j DROP
+
+# Remove a specific INPUT rule by line number.
+sudo iptables -D INPUT <LINE_NUMBER>
+
+sudo iptables -t nat -L -n -v
+
+
+################################################################################
+# 7. FAIL2BAN INSTALLATION AND SSH PROTECTION
+################################################################################
+
+sudo apt install fail2ban -y
+sudo systemctl status fail2ban
+sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
+sudo nano /etc/fail2ban/jail.local
+
+# Example jail.local SSH configuration:
+# [sshd]
+# enabled = true
+# port = ssh
+# filter = sshd
+# logpath = /var/log/auth.log
+# maxretry = 3
+# bantime = 1h
+# findtime = 10m
+
+sudo systemctl restart fail2ban
+sudo fail2ban-client status
+sudo fail2ban-client status sshd
+
+# Ban an IP manually.
+sudo fail2ban-client set sshd banip <10.10.10.165>
+
+# Unban an IP manually.
+sudo fail2ban-client set sshd unbanip <10.10.10.165>
+
+sudo tail -n 100 /var/log/fail2ban.log
+
+
+################################################################################
+# 8. AIDE FILE INTEGRITY MONITORING
+################################################################################
+
+sudo apt install aide aide-common -y
+sudo aideinit
+sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+sudo aide --check
+sudo aide --update
+sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+
+
+################################################################################
+# 9. LYNIS SECURITY AUDITING
+################################################################################
+
+sudo apt install lynis -y
+sudo lynis audit system
+sudo less /var/log/lynis-report.dat
+sudo less /var/log/lynis.log
+sudo grep -i warning /var/log/lynis-report.dat
+sudo grep -i suggestion /var/log/lynis-report.dat
+sudo grep -i hardening_index /var/log/lynis-report.dat
+
+
+################################################################################
+# 10. CHRONY / TIME SYNCHRONIZATION
+################################################################################
+
+sudo apt install chrony -y
+sudo systemctl status chrony
+sudo systemctl enable chrony
+sudo nano /etc/chrony/chrony.conf
+sudo systemctl restart chrony
+chronyc tracking
+chronyc sources -v
+timedatectl status
+
+
+################################################################################
+# 11. DISABLE UNNEEDED SERVICES
+################################################################################
+
+systemctl status avahi-daemon
+sudo systemctl disable --now avahi-daemon
+
+systemctl status cups
+sudo systemctl disable --now cups
+
+systemctl status whoopsie
+sudo systemctl disable --now whoopsie
+
+systemctl status lightdm
+sudo systemctl disable --now lightdm
+
+systemctl --failed
+
+
+################################################################################
+# 12. SYSCTL NETWORK HARDENING
+################################################################################
+
+sudo cp /etc/sysctl.conf /etc/sysctl.conf.bak
+sudo nano /etc/sysctl.conf
+
+# Recommended settings to add or verify:
+# net.ipv4.conf.all.rp_filter = 2
+# net.ipv4.conf.default.rp_filter = 2
+# net.ipv4.conf.all.accept_redirects = 0
+# net.ipv4.conf.default.accept_redirects = 0
+# net.ipv6.conf.all.accept_redirects = 0
+# net.ipv6.conf.default.accept_redirects = 0
+# net.ipv4.conf.all.send_redirects = 0
+# net.ipv4.conf.default.send_redirects = 0
+# net.ipv4.icmp_echo_ignore_broadcasts = 1
+# net.ipv4.icmp_ignore_bogus_error_responses = 1
+# net.ipv4.tcp_syncookies = 1
+
+sudo sysctl -p
+sudo sysctl -a
+sysctl net.ipv4.conf.all.rp_filter
+sysctl net.ipv4.conf.all.accept_redirects
+sysctl net.ipv4.conf.all.send_redirects
+
+
+################################################################################
+# 13. LOG REVIEW AND MONITORING
+################################################################################
+
+sudo journalctl
+sudo journalctl -n 100
+sudo journalctl -f
+sudo less /var/log/auth.log
+sudo tail -f /var/log/auth.log
+sudo grep -i "failed password" /var/log/auth.log
+sudo grep -i "accepted" /var/log/auth.log
+sudo grep -i "sudo" /var/log/auth.log
+last
+lastb
+
+
+################################################################################
+# 14. NETWORK TESTING AND TRAFFIC CAPTURE
+################################################################################
+
+ping -c 4 <GATEWAY_IP>
+ping -c 4 <TARGET_IP>
+ip neigh
+
+# Run from an authorized Kali/client machine only.
+nmap <10.10.10.123>
+nmap -sV <10.10.10.123>
+nmap -A <10.10.10.123>
+
+sudo tcpdump -i <INTERFACE>
+sudo tcpdump -i <INTERFACE> -w dvwa-capture.pcap
+tcpdump -r dvwa-capture.pcap
+sudo tcpdump -i <INTERFACE> port 22
+sudo tcpdump -i <INTERFACE> port 80
+
+
+################################################################################
+# 15. APACHE / DVWA SERVICE CHECKS
+################################################################################
+
+sudo systemctl status apache2
+sudo systemctl restart apache2
+sudo systemctl enable apache2
+sudo ss -tulnp | grep apache
+curl -I http://localhost
+sudo tail -n 100 /var/log/apache2/access.log
+sudo tail -n 100 /var/log/apache2/error.log
+
+
+################################################################################
+# 16. MYSQL / DATABASE SERVICE CHECKS
+################################################################################
+
+sudo systemctl status mysql
+sudo systemctl restart mysql
+sudo systemctl enable mysql
+sudo ss -tulnp | grep mysql
+sudo mysql
+
+
+################################################################################
+# 17. BACKUP AND DOCUMENTATION COMMANDS
+################################################################################
+
+mkdir -p ~/DVWA-Hardening-Evidence
+hostnamectl > ~/DVWA-Hardening-Evidence/hostnamectl.txt
+ip a > ~/DVWA-Hardening-Evidence/ip-addresses.txt
+ip route > ~/DVWA-Hardening-Evidence/ip-route.txt
+sudo ss -tulnp > ~/DVWA-Hardening-Evidence/listening-ports.txt
+sudo ufw status verbose > ~/DVWA-Hardening-Evidence/ufw-status.txt
+sudo fail2ban-client status > ~/DVWA-Hardening-Evidence/fail2ban-status.txt
+sudo fail2ban-client status sshd > ~/DVWA-Hardening-Evidence/fail2ban-sshd-status.txt
+chronyc tracking > ~/DVWA-Hardening-Evidence/chrony-tracking.txt
+systemctl --type=service --state=running > ~/DVWA-Hardening-Evidence/running-services.txt
+systemctl --failed > ~/DVWA-Hardening-Evidence/failed-services.txt
+tar -czvf DVWA-Hardening-Evidence.tar.gz ~/DVWA-Hardening-Evidence
+
+
+################################################################################
+# 18. DAILY BLUE TEAM CHECK COMMANDS
+################################################################################
+
+hostnamectl
+uptime
+date
+ip a
+ip route
+sudo ufw status verbose
+sudo ss -tulnp
+sudo grep -i "failed password" /var/log/auth.log | tail -n 20
+sudo grep -i "accepted" /var/log/auth.log | tail -n 20
+sudo fail2ban-client status
+sudo fail2ban-client status sshd
+sudo aide --check
+systemctl --failed
+sudo journalctl -n 50
+
+
+################################################################################
+# 19. COMMON TROUBLESHOOTING COMMANDS
+################################################################################
+
+which <COMMAND>
+sudo find / -name "<FILENAME>" 2>/dev/null
+df -h
+du -sh <DIRECTORY>
+free -h
+top
+htop
+ps aux | grep <PROCESS_NAME>
+sudo kill <PID>
+sudo systemctl restart systemd-networkd
+sudo systemctl restart systemd-resolved
+
+
+################################################################################
+# 20. FINAL VALIDATION CHECKLIST COMMANDS
+################################################################################
+
+sudo sshd -t
+systemctl status ssh
+sudo ufw status verbose
+sudo fail2ban-client status
+ls -lh /var/lib/aide/
+timedatectl status
+chronyc tracking
+sudo ss -tulnp
+systemctl --failed
+sudo lynis audit system
 
